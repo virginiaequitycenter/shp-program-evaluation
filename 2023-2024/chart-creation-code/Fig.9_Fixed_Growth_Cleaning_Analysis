@@ -1,0 +1,58 @@
+##############################################################
+# 2023-24 Program Evaluation: Fig 9- Fixed-Growth Cleaning and Analyzing 
+# Authors: Asha Muralidharan     
+# GitHub: asha-ec                              
+# Last revised: 2024-02-19     
+# Summary: Cleaning Fixed-Growth Mindset Survey given to Starr-Hill 
+#          Pathways' students in Check-ins in Fall of 2023
+#.         to create chart for Program Evaluation
+##############################################################
+
+##############################################################
+# Library Intros and Excel Imports                                
+##############################################################
+
+library(tidyverse)
+library(dplyr)
+library(readxl)
+library(writexl)
+library(labelled)
+
+fixed_growth <- read_excel("SHP Fixed-Growth 23-24.xlsx")
+
+# Remove students who did not complete the survey
+fixed_growth <- drop_na(fixed_growth, `Fixed Score`)
+
+# Rename columns
+colnames(fixed_growth) <- c("First Name", "Last Name", "Growth Score", "Fixed Score", "Total Score (Growth-Fixed)")
+
+# Create mindset categories for the different scores based on total score bins
+fixed_growth <- fixed_growth %>% add_column(Mindset="")
+fixed_growth <- fixed_growth %>% mutate(Mindset= ifelse(`Total Score (Growth-Fixed)`<=-10,"Strong Fixed",Mindset))
+fixed_growth <- fixed_growth %>% mutate(Mindset= ifelse(`Total Score (Growth-Fixed)`>= -9 & `Total Score (Growth-Fixed)`<= -1,"Somewhat Fixed",Mindset))
+fixed_growth <- fixed_growth %>% mutate(Mindset= ifelse(`Total Score (Growth-Fixed)`== 0,"Neutral Mindset",Mindset))
+fixed_growth <- fixed_growth %>% mutate(Mindset= ifelse(`Total Score (Growth-Fixed)`>= 1 & `Total Score (Growth-Fixed)`<= 9,"Emerging Growth",Mindset))
+fixed_growth <- fixed_growth %>% mutate(Mindset= ifelse(`Total Score (Growth-Fixed)`>= 10 & `Total Score (Growth-Fixed)`<= 19,"Strong Growth",Mindset))
+fixed_growth <- fixed_growth %>% mutate(Mindset= ifelse(`Total Score (Growth-Fixed)`>= 20,"Extreme Growth Mindset",Mindset))
+
+write_excel_csv(fixed_growth,"Fixed Growth Mindset Fall 2023- Clean_No NAs.csv")
+
+# Refactorize Fixed Growth Mindset based on on Summary
+fixed_growth_summ <- fixed_growth %>% group_by(Mindset) %>% summarise(count = n())
+
+fixed_growth_summ$Mindset <- factor(fixed_growth_summ$Mindset, levels=c("Strong Fixed","Somewhat Fixed","Neutral Mindset",
+                                                                        "Emerging Growth","Strong Growth","Extreme Growth Mindset"))
+
+##############################################################
+# Building Summary Charts for Growth Mindset in GGPlot                              
+##############################################################
+
+ggplot(fixed_growth_summ, aes(y=count, x=Mindset)) + 
+  geom_bar(position="dodge", stat="identity", fill="#0C9ED9") +
+  labs(y="Number of Students",x="Mindset", title="Growth Mindset Survey Responses") +
+  theme_minimal()+
+  theme(legend.position="none")+
+  geom_text(aes(label = count), position = position_dodge(.9), vjust=-.5)+
+  scale_x_discrete(limits = rev(levels(fixed_growth$Mindset)))+
+  scale_y_continuous(name="Number of Students", breaks=seq(0, 40,5),limits=c(0,40))
+
